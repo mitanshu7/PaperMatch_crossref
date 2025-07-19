@@ -1,5 +1,4 @@
 from datasets import load_dataset
-from bs4 import BeautifulSoup
 
 ################################################################################
 
@@ -16,31 +15,6 @@ dataset = dataset.select_columns(need)
 
 # Process entries
 def prepare_metadata(row):
-    
-    # Extract abstract save in html format
-    soup = BeautifulSoup(row['abstract'], 'html.parser')
-    
-    if soup.find('jats:p'):
-        row['abstract'] = soup.find('jats:p').get_text()
-    elif soup.find('JATS1:p'):
-        row['abstract'] = soup.find('JATS1:p').get_text()
-    elif soup.find('ns3:p'):
-        row['abstract'] = soup.find('ns3:p').get_text()
-    elif soup.find('ns4:p'):
-        row['abstract'] = soup.find('ns3:p').get_text()
-    elif soup.find('ns5:p'):
-        row['abstract'] = soup.find('ns3:p').get_text()
-    elif soup.find('ns7:p'):
-        row['abstract'] = soup.find('ns3:p').get_text()
-    elif soup.find('ja:p'):
-        row['abstract'] = soup.find('ja:p').get_text()
-    elif soup.find('p'):
-        row['abstract'] = soup.find('p').get_text()
-    else:
-        print('*'*80)
-        print(row['abstract'])
-        print('*'*80)
-        
     
     # Get title text from the list
     row['title'] = row['title'][0]
@@ -63,7 +37,6 @@ def prepare_metadata(row):
     row['author'] = authors
 
     # Add month and year
-    # timestamp = datetime.strptime(row['created']['date-time'], '%Y-%m-%dT%H:%M:%SZ')
     timestamp = row['created']['date-time']
     
     row['year'] = int(timestamp.strftime('%Y'))
