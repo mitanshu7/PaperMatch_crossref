@@ -3,27 +3,44 @@ from bs4 import BeautifulSoup
 
 ################################################################################
 
-# data_files = {'train': '/home/mitanshu/Downloads/March 2025 Public Data File from Crossref/*.jsonl.gz'}
-data_files = {'train': '/home/mitanshu/Downloads/Sample Dataset March 2025 Public Data File from Crossref/*.jsonl.gz'}
+data_files = {'train': '/home/mitanshu/Downloads/March 2025 Public Data File from Crossref/*.jsonl.gz'}
 
 dataset = load_dataset('json', data_files=data_files, split='train', streaming=True)
 
-# print(dataset)
-
+# Rows must have abstract to embed
+dataset = dataset.filter(lambda row: bool(row.get('DOI')) and bool(row.get('abstract')) and bool(row.get('title')) and bool(row.get('author')) and bool(row.get('URL')) and bool(row.get('created')))
 
 # Columns to save
 need = ['DOI', 'abstract', 'title', 'author', 'URL', 'created']
 dataset = dataset.select_columns(need)
-
-# Rows must have abstract to embed
-dataset = dataset.filter(lambda row: bool(row.get('abstract')) )
 
 # Process entries
 def prepare_metadata(row):
     
     # Extract abstract save in html format
     soup = BeautifulSoup(row['abstract'], 'html.parser')
-    row['abstract'] = soup.find('jats:p').get_text()
+    
+    if soup.find('jats:p'):
+        row['abstract'] = soup.find('jats:p').get_text()
+    elif soup.find('JATS1:p'):
+        row['abstract'] = soup.find('JATS1:p').get_text()
+    elif soup.find('ns3:p'):
+        row['abstract'] = soup.find('ns3:p').get_text()
+    elif soup.find('ns4:p'):
+        row['abstract'] = soup.find('ns3:p').get_text()
+    elif soup.find('ns5:p'):
+        row['abstract'] = soup.find('ns3:p').get_text()
+    elif soup.find('ns7:p'):
+        row['abstract'] = soup.find('ns3:p').get_text()
+    elif soup.find('ja:p'):
+        row['abstract'] = soup.find('ja:p').get_text()
+    elif soup.find('p'):
+        row['abstract'] = soup.find('p').get_text()
+    else:
+        print('*'*80)
+        print(row['abstract'])
+        print('*'*80)
+        
     
     # Get title text from the list
     row['title'] = row['title'][0]
@@ -59,9 +76,7 @@ def prepare_metadata(row):
 # Map the metadata
 dataset = dataset.map(prepare_metadata, remove_columns=['created'])
 
-# print(list(next(iter(dataset)).keys()))
-# print(next(iter(dataset)))
-# print(dataset)
+# dataset = dataset.rename_column("DOI", "id")
 
 # Save it
-dataset.to_parquet("/home/mitanshu/Downloads/tmp/crossref_metadata.parquet", index=False)
+dataset.to_parquet("crossref_metadata.parquet")
