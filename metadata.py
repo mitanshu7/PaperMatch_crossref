@@ -1,23 +1,38 @@
 from datasets import load_dataset
 from time import time
+from multiprocessing import Pool, cpu_count
+from glob import glob
+import os
 
-start_time = time()
 ################################################################################
 
-data_files = {'train': '/home/mitanshu/Downloads/March 2025 Public Data File from Crossref/*.jsonl.gz'}
+# Gather the jsonl's
+data_files = glob('/home/mitanshu/Downloads/Sample Dataset March 2025 Public Data File from Crossref/*.jsonl.gz')
+data_files.sort()
 
-dataset = load_dataset('json', data_files=data_files, split='train', streaming=True)
-
-# Rows must have abstract to embed
-dataset = dataset.filter(lambda row: bool(row.get('DOI')) and bool(row.get('abstract')) and bool(row.get('title')) and bool(row.get('author')) and bool(row.get('URL')) and bool(row.get('created')))
-
-# Columns to save
-need = ['DOI', 'abstract', 'title', 'author', 'URL', 'created']
-dataset = dataset.select_columns(need)
+# Save here
+processed_folder = 'crossref_metadata'
+os.makedirs(processed_folder, exist_ok=True)
 
 # Process entries
-def prepare_metadata(row):
+def prepare_data(filename):
     
+    # Load the file
+    dataset = load_dataset('json', data_files=filename, split='train', streaming=False)
+    
+    # Filter needs
+    dataset = dataset.filter(lambda row: (bool(row.get('DOI')) and bool(row.get('abstract')) and bool(row.get('title')) and bool(row.get('author')) and bool(row.get('URL')) and bool(row.get('created'))) )
+    
+    try:
+        # Columns we care about
+        need = ['DOI', 'abstract', 'title', 'author', 'URL', 'created']
+        dataset = dataset.select_columns(need)
+        return dataset
+    except Exception as e:
+        print(f"Error {e} for filename {filename}")
+        return None
+    
+def prepare_metadata(row):
     # Get title text from the list
     row['title'] = row['title'][0]
     
@@ -45,17 +60,35 @@ def prepare_metadata(row):
     row['month'] = timestamp.strftime('%B')
     
     return row
+    
+def process_file(filename):
+    
+    # make file usable
+    dataset = prepare_data(filename)
+    
+    if dataset is not None:
+        
+        # Extract info
+        dataset = dataset.map(prepare_metadata, remove_columns=['created'])
+        
+        # Save
+        filename = f"{processed_folder}/{os.path.basename(filename).replace('.jsonl.gz', '.parquet')}"
+        dataset.to_parquet(filename)
+    
+        return filename
+    else:
+        return None
 
 ################################################################################
 
-# Map the metadata
-dataset = dataset.map(prepare_metadata, remove_columns=['created'])
+if __name__ == '__main__':
+    
+    start_time = time()
+    
+    with Pool(cpu_count()) as pool:
+        pool.map(process_file, data_files)
+        
+    end_time = time()
+    print(f"Time taken: {(end_time - start_time)/3600} hours")
 
-# dataset = dataset.rename_column("DOI", "id")
-
-# Save it
-dataset.to_parquet("crossref_metadata.parquet")
 ################################################################################
-
-end_time = time()
-print(f"Time taken: {(end_time - start_time)/3600} hours")
