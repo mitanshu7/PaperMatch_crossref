@@ -1,20 +1,34 @@
 # Import required libraries
-from sentence_transformers import SentenceTransformer  # Embedding model
-from datasets import load_dataset
+import os
+from glob import glob
+
+import pandas as pd
+from sentence_transformers import SentenceTransformer
+from tqdm import tqdm
 
 # Define the embedding model
 model = SentenceTransformer("mixedbread-ai/mxbai-embed-large-v1")
 
-# Function to create embeddings
-def embed(rows):
-    embeddings = model.encode(rows["abstract"], batch_size=96, show_progress_bar=True, convert_to_numpy=True).tolist()
-    return {'vector' : embeddings}
+# Split metadata
+split_metadata_files = glob("crossref_metadata_split/*.parquet")
+split_metadata_files.sort()
 
-# Create a new dataset
-dataset = load_dataset("parquet", data_files="crossref_metadata.parquet", streaming=True)
+# Folder to save files in
+embedding_folder = "crossref_embedding_split"
+os.makedirs(embedding_folder, exist_ok=True)
 
-# Calculate the embeddings for text and paragraphs
-dataset = dataset.map(embed, batched=True, batch_size=960)
+# Go over data files one by one
+for metadata_file in tqdm(split_metadata_files):
+    # Read
+    df = pd.read_parquet(metadata_file)
 
-# Save
-dataset["train"].to_parquet("crossref_metadata_embeddings.parquet")
+    # Calculate the embeddings for text and paragraphs
+    df["vector"] = model.encode(
+        df["abstract"].tolist(),
+        batch_size=120,
+        show_progress_bar=True,
+        convert_to_numpy=True,
+    ).tolist()
+
+    # Save
+    df.to_parquet(f"{embedding_folder}/{os.path.basename(metadata_file)}", index=False)
