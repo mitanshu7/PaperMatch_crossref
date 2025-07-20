@@ -5,7 +5,7 @@ from datasets import load_dataset
 
 # Also, whether to split the consolidated file into parts
 # Set 0 for no sharding.
-num_parts = 0
+num_parts = 10
 
 # Create a new dataset
 dataset = load_dataset("parquet", data_dir="crossref_metadata/", num_proc=24)
