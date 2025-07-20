@@ -1,5 +1,7 @@
 from datasets import load_dataset
+from time import time
 
+start_time = time()
 ################################################################################
 
 data_files = {'train': '/home/mitanshu/Downloads/March 2025 Public Data File from Crossref/*.jsonl.gz'}
@@ -53,3 +55,7 @@ dataset = dataset.map(prepare_metadata, remove_columns=['created'])
 
 # Save it
 dataset.to_parquet("crossref_metadata.parquet")
+################################################################################
+
+end_time = time()
+print(f"Time taken: {(end_time - start_time)/3600} hours")
