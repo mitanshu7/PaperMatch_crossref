@@ -1,14 +1,15 @@
-from datasets import load_dataset
+from datasets import Dataset
 from time import time
 from multiprocessing import Pool, cpu_count
 from glob import glob
 import os
+import pandas as pd
+from datetime import datetime
 
 ################################################################################
 
 # Gather the jsonl's
-data_files = glob('/home/mitanshu/Downloads/Sample Dataset March 2025 Public Data File from Crossref/*.jsonl.gz')
-data_files.sort()
+data_files = glob('/home/mitanshu/Downloads/March 2025 Public Data File from Crossref/*.jsonl.gz')
 
 # Save here
 processed_folder = 'crossref_metadata'
@@ -18,7 +19,8 @@ os.makedirs(processed_folder, exist_ok=True)
 def prepare_data(filename):
     
     # Load the file
-    dataset = load_dataset('json', data_files=filename, split='train', streaming=False)
+    df = pd.read_json(filename, lines=True)
+    dataset = Dataset.from_pandas(df)
     
     # Filter needs
     dataset = dataset.filter(lambda row: (bool(row.get('DOI')) and bool(row.get('abstract')) and bool(row.get('title')) and bool(row.get('author')) and bool(row.get('URL')) and bool(row.get('created'))) )
@@ -29,7 +31,9 @@ def prepare_data(filename):
         dataset = dataset.select_columns(need)
         return dataset
     except Exception as e:
-        print(f"Error {e} for filename {filename}")
+        
+        with open ('metadata.log', 'a') as file:
+            file.write(f"{filename} : {e}")
         return None
     
 def prepare_metadata(row):
@@ -54,7 +58,7 @@ def prepare_metadata(row):
     row['author'] = authors
 
     # Add month and year
-    timestamp = row['created']['date-time']
+    timestamp = datetime.strptime(row['created']['date-time'], '%Y-%m-%dT%H:%M:%SZ')
     
     row['year'] = int(timestamp.strftime('%Y'))
     row['month'] = timestamp.strftime('%B')

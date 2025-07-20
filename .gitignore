@@ -8,3 +8,8 @@ wheels/
 
 # Virtual environments
 .venv
+*.parquet
+*.jsonl.gz
+*.jsonl
+*.json
+*.log
