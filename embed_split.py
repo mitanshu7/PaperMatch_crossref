@@ -5,6 +5,7 @@ from glob import glob
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
+import numpy as np
 
 # Define the embedding model
 model = SentenceTransformer("mixedbread-ai/mxbai-embed-large-v1")
@@ -32,6 +33,11 @@ for metadata_file in tqdm(split_metadata_files):
         show_progress_bar=True,
         convert_to_numpy=True,
     ).tolist()
+    
+    # Convert lists back to numpy arrays with the correct dtype
+    df["vector"] = df["vector"].apply(
+        lambda x: np.array(x, dtype=np.float32)
+    )
 
     # Save
     df.to_parquet(f"{embedding_folder}/{os.path.basename(metadata_file)}", index=False)
