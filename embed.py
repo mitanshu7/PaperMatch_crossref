@@ -9,6 +9,9 @@ from tqdm import tqdm
 # Define the embedding model
 model = SentenceTransformer("mixedbread-ai/mxbai-embed-large-v1")
 
+# declare batch size
+BATCH_SIZE = 120
+
 # Split metadata
 split_metadata_files = glob("crossref_metadata_split/*.parquet")
 split_metadata_files.sort()
@@ -25,7 +28,7 @@ for metadata_file in tqdm(split_metadata_files):
     # Calculate the embeddings for text and paragraphs
     df["vector"] = model.encode(
         df["abstract"].tolist(),
-        batch_size=120,
+        batch_size=BATCH_SIZE,
         show_progress_bar=True,
         convert_to_numpy=True,
     ).tolist()
