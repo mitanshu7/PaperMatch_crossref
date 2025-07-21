@@ -13,3 +13,4 @@ wheels/
 *.jsonl
 *.json
 *.log
+.env
