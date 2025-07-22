@@ -21,7 +21,7 @@ print(f'Using BATCH SIZE: {BATCH_SIZE}')
 # Define the embedding model
 embedding_model_name = "mixedbread-ai/mxbai-embed-large-v1"
 print(f'Using embedding model: {embedding_model_name}')
-model = SentenceTransformer(embedding_model_name)
+model = SentenceTransformer(embedding_model_name, device='cpu')
 
 ################################################################################
 
