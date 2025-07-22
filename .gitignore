@@ -14,3 +14,4 @@ wheels/
 *.json
 *.log
 .env
+bluuebunny/crossref_metadata_2025_split/.gitattributes
