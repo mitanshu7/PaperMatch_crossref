@@ -1,6 +1,7 @@
 # Import required libraries
 import os
 from multiprocess import set_start_method
+from time import time
 
 from sentence_transformers import SentenceTransformer
 import numpy as np
@@ -9,6 +10,7 @@ from dotenv import load_dotenv
 import torch
 from datasets import load_dataset
 
+start_time = time()
 ################################################################################
 
 # Load secrets
@@ -102,3 +104,7 @@ if __name__ == "__main__":
     # Upload binarised vectors
     print('Uploading binary embeddings')
     dataset.push_to_hub(embedding_repo_id_binary)
+    
+    # time
+    end_time = time()
+    print(f"Time taken = {end_time-start_time} seconds")
