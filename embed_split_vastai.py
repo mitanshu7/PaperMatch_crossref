@@ -78,10 +78,6 @@ if __name__ == "__main__":
     # Load dataset
     print(f'Loading dataset')
     dataset = load_dataset("parquet", data_dir=metadata_repo_id, split='train')
-    
-    # try
-    print(f"Slicing dataset to try it out")
-    dataset = dataset.shuffle().take(BATCH_SIZE*20)
 
     # Embed
     print('Embedding abstracts')
