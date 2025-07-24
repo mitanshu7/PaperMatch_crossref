@@ -21,9 +21,6 @@ load_dotenv('.env')
 BATCH_SIZE = int(os.getenv('BATCH_SIZE'))
 print(f'Using BATCH SIZE: {BATCH_SIZE}')
 
-# Number of processes to use
-NUM_PROC = 128
-
 # Define the embedding model
 embedding_model_name = "mixedbread-ai/mxbai-embed-large-v1"
 print(f'Using embedding model: {embedding_model_name}')
@@ -38,7 +35,7 @@ print(f'Huggingface username: {hf_username}')
 # Download the split dataset
 metadata_repo_id = os.getenv('HF_REPO_METADATA_SPLIT')
 print(f'Download metadata from: {metadata_repo_id}')
-snapshot_download(repo_id=metadata_repo_id, repo_type='dataset', local_dir=metadata_repo_id, ignore_patterns=['part_1.parquet', 'part_10.parquet', 'part_2.parquet'])
+snapshot_download(repo_id=metadata_repo_id, repo_type='dataset', local_dir=metadata_repo_id, ignore_patterns=['part_1.parquet', 'part_10.parquet', 'part_2.parquet', 'part_3.parquet'])
 
 # Gather individual files
 metadata_files = glob(f'{metadata_repo_id}/**/*.parquet', recursive=True)
@@ -99,7 +96,7 @@ if __name__ == "__main__":
     
         # Load dataset
         print(f'Processing: {metadata_file}')
-        dataset = load_dataset("parquet", data_files=metadata_file, split='train', num_proc=NUM_PROC, keep_in_memory=True)
+        dataset = load_dataset("parquet", data_files=metadata_file, split='train', keep_in_memory=True)
     
         # Embed
         print('Embedding abstracts')
@@ -118,15 +115,11 @@ if __name__ == "__main__":
         
         # Upload floats
         print('Uploading float embeddings')
-        hf_client.upload_file(path_or_fileobj=float_embedding_name, path_in_repo=f'data/{os.path.basename(metadata_file)}', repo_id=embedding_repo_id, repo_type='dataset')
-        
-        # Cleanup floats
-        print(f'Removing float file: {float_embedding_name}')
-        os.remove(float_embedding_name)
+        hf_client.upload_file(path_or_fileobj=float_embedding_name, path_in_repo=f'data/{os.path.basename(metadata_file)}', repo_id=embedding_repo_id, repo_type='dataset', run_as_future=True)
         
         # Binarise embeddings
         print('Binarising vectors')
-        dataset = dataset.map(binarise, num_proc=NUM_PROC)
+        dataset = dataset.map(binarise)
         
         # Save to parquet
         binary_embedding_name = f'{embedding_repo_id_binary}/{os.path.basename(metadata_file)}'
@@ -135,10 +128,7 @@ if __name__ == "__main__":
         
         # Upload floats
         print('Uploading binary embeddings')
-        hf_client.upload_file(path_or_fileobj=binary_embedding_name, path_in_repo=f'data/{os.path.basename(metadata_file)}', repo_id=embedding_repo_id_binary, repo_type='dataset')
-        
-        print(f'Removing binary file: {binary_embedding_name}')
-        os.remove(binary_embedding_name)
+        hf_client.upload_file(path_or_fileobj=binary_embedding_name, path_in_repo=f'data/{os.path.basename(metadata_file)}', repo_id=embedding_repo_id_binary, repo_type='dataset', run_as_future=True)
         
     
     # time
