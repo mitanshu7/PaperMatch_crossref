@@ -119,7 +119,7 @@ if __name__ == "__main__":
         
         # Binarise embeddings
         print('Binarising vectors')
-        dataset = dataset.map(binarise)
+        dataset = dataset.map(binarise, num_proc=32)
         
         # Save to parquet
         binary_embedding_name = f'{embedding_repo_id_binary}/{os.path.basename(metadata_file)}'
