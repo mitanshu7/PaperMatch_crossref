@@ -35,7 +35,7 @@ print(f'Huggingface username: {hf_username}')
 # Download the split dataset
 metadata_repo_id = os.getenv('HF_REPO_METADATA_SPLIT')
 print(f'Download metadata from: {metadata_repo_id}')
-snapshot_download(repo_id=metadata_repo_id, repo_type='dataset', local_dir=metadata_repo_id, ignore_patterns=['part_1.parquet', 'part_10.parquet', 'part_2.parquet', 'part_3.parquet'])
+snapshot_download(repo_id=metadata_repo_id, repo_type='dataset', local_dir=metadata_repo_id, ignore_patterns=['part_1.parquet', 'part_10.parquet', 'part_2.parquet', 'part_3.parquet', 'part_4.parquet', 'part_5.parquet'])
 
 # Gather individual files
 metadata_files = glob(f'{metadata_repo_id}/**/*.parquet', recursive=True)
