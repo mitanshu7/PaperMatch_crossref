@@ -18,7 +18,7 @@
 
 run_embed() {
 
-    mkdir -p $(pwd)/volumes/milvus
+    mkdir -p /mnt/block_volume/volumes/milvus
     
     cat << EOF > embedEtcd.yaml
 listen-client-urls: http://0.0.0.0:2379
@@ -50,12 +50,12 @@ EOF
         -e ETCD_DATA_DIR=/var/lib/milvus/etcd \
         -e ETCD_CONFIG_PATH=/milvus/configs/embedEtcd.yaml \
         -e COMMON_STORAGETYPE=local \
-        -v $(pwd)/volumes/milvus:/var/lib/milvus:Z \
+        -v /mnt/block_volume/volumes/milvus:/var/lib/milvus:Z \
         -v $(pwd)/embedEtcd.yaml:/milvus/configs/embedEtcd.yaml:Z \
         -v $(pwd)/user.yaml:/milvus/configs/user.yaml:Z \
-        -p 19531:19530 \
-        -p 9092:9091 \
-        -p 2380:2379 \
+        -p 19530:19530 \
+        -p 9091:9091 \
+        -p 2379:2379 \
         --health-cmd="curl -f http://localhost:9091/healthz" \
         --health-interval=30s \
         --health-start-period=90s \
@@ -69,7 +69,7 @@ wait_for_milvus_running() {
     echo "Wait for Milvus Starting..."
     while true
     do
-        res=`podman ps|grep milvus-standalone|grep healthy|wc -l`
+        res=`podman ps|grep milvus-standalone-crossref|grep healthy|wc -l`
         if [ $res -eq 1 ]
         then
             echo "Start successfully."
@@ -81,17 +81,17 @@ wait_for_milvus_running() {
 }
 
 start() {
-    res=`podman ps|grep milvus-standalone|grep healthy|wc -l`
+    res=`podman ps|grep milvus-standalone-crossref|grep healthy|wc -l`
     if [ $res -eq 1 ]
     then
         echo "Milvus is running."
         exit 0
     fi
 
-    res=`podman ps -a|grep milvus-standalone|wc -l`
+    res=`podman ps -a|grep milvus-standalone-crossref|wc -l`
     if [ $res -eq 1 ]
     then
-        podman start milvus-standalone 1> /dev/null
+        podman start milvus-standalone-crossref 1> /dev/null
     else
         run_embed
     fi
@@ -106,7 +106,7 @@ start() {
 }
 
 stop() {
-    podman stop milvus-standalone 1> /dev/null
+    podman stop milvus-standalone-crossref 1> /dev/null
 
     if [ $? -ne 0 ]
     then
@@ -118,13 +118,13 @@ stop() {
 }
 
 delete_container() {
-    res=`podman ps|grep milvus-standalone|wc -l`
+    res=`podman ps|grep milvus-standalone-crossref|wc -l`
     if [ $res -eq 1 ]
     then
         echo "Please stop Milvus service before delete."
         exit 1
     fi
-    podman rm milvus-standalone 1> /dev/null
+    podman rm milvus-standalone-crossref 1> /dev/null
     if [ $? -ne 0 ]
     then
         echo "Delete milvus container failed."
@@ -144,7 +144,7 @@ delete() {
 upgrade() {
     read -p "Please confirm if you'd like to proceed with the upgrade. The default will be to the latest version. Confirm with 'y' for yes or 'n' for no. > " check
     if [ "$check" == "y" ] ||[ "$check" == "Y" ];then
-        res=`podman ps -a|grep milvus-standalone|wc -l`
+        res=`podman ps -a|grep milvus-standalone-crossref|wc -l`
         if [ $res -eq 1 ]
         then
             stop
