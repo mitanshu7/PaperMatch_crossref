@@ -4,11 +4,16 @@ import requests
 from time import sleep
 from glob import glob
 
+################################################################################
+# Gather files
+# TODO: /mnt/block_volume/volumes/milvus is mapped to /var/lib/milvus/. make below better
+files = glob('/mnt/block_volume/volumes/milvus/processed_data/*.parquet')
+files = [ ["/var/lib/milvus/processed_data/" + i.split('/')[-1]] for i in files ]
 
 ################################################################################
 # Create collection
 # Define client
-client = MilvusClient("http://localhost:19531")
+client = MilvusClient("http://localhost:19530")
 
 # Drop any of the pre-existing collections
 # Need to drop it because otherwise milvus does not check for (and keeps)
@@ -24,19 +29,19 @@ schema = MilvusClient.create_schema(
 )
 
 # Add the fields to the schema
-schema.add_field(field_name="DOI", datatype=DataType.VARCHAR, max_length=32, is_primary=True)
+# TODO: Find optimal max length for varchar
+schema.add_field(field_name="DOI", datatype=DataType.VARCHAR, max_length=256, is_primary=True)
 
 schema.add_field(field_name="vector", datatype=DataType.BINARY_VECTOR, dim=1024)
 
-schema.add_field(field_name="title", datatype=DataType.VARCHAR, max_length=512)
-schema.add_field(field_name="authors", datatype=DataType.VARCHAR, max_length=256)
-schema.add_field(field_name="abstract", datatype=DataType.VARCHAR, max_length=3072)
-schema.add_field(field_name="categories", datatype=DataType.VARCHAR, max_length=128)
+schema.add_field(field_name="title", datatype=DataType.VARCHAR, max_length=2048)
+schema.add_field(field_name="author", datatype=DataType.VARCHAR, max_length=512)
+schema.add_field(field_name="abstract", datatype=DataType.VARCHAR, max_length=4096)
 schema.add_field(field_name="month", datatype=DataType.VARCHAR, max_length=16)
 schema.add_field(field_name="year", datatype=DataType.INT64, max_length=8, is_clustering_key=True)
-schema.add_field(field_name="url", datatype=DataType.VARCHAR, max_length=64)
+schema.add_field(field_name="URL", datatype=DataType.VARCHAR, max_length=256)
 
-print("Issues with scheme: ", schema.verify())
+print("Issues with schema: ", schema.verify())
 
 # Create a collection
 client.create_collection(
@@ -44,86 +49,6 @@ client.create_collection(
     schema=schema,
     properties={ "mmap.enabled": "true" }
 )
-
-################################################################################
-# Create import job
-# https://milvus.io/docs/import-data.md
-# Gather files
-
-files = glob('volumes/milvus/data/*.parquet')
-files = [ ["/var/lib/milvus/data/" + i.split('/')[-1]] for i in files ]
-
-# Define the API endpoint
-job_url = "http://localhost:19531/v2/vectordb/jobs/import/create"
-
-# Define the headers
-headers = {
-    "Content-Type": "application/json"
-}
-
-# Define the data payload
-job_url_data = {
-    "files": files,
-    "collectionName": "crossref"
-}
-
-# Make the POST request
-job_response = requests.post(job_url, headers=headers, json=job_url_data)
-job_json = job_response.json()
-
-# Print the response
-print("Job details:")
-print(job_response.status_code)
-print(job_json)
-
-# Extract jobId
-job_id = job_json['data']['jobId']
-
-# Periodically check on import status
-progress_url = "http://localhost:19531/v2/vectordb/jobs/import/get_progress"
-
-progress_url_data = {
-    "jobId": f"{job_id}"
-}
-
-while True:
-
-    print('*'*80)
-
-    # Sleep a bit
-    seconds = 10
-    print(f"Sleeping for {seconds} seconds")
-    sleep(seconds)
-
-    
-    # Make the POST request
-    progress_response = requests.post(progress_url, headers=headers, json=progress_url_data)
-
-    progress_json = progress_response.json()
-    # print(progress_json)
-
-    progress_percent = progress_json['data']['progress']
-    progress_state = progress_json['data']['state']
-
-    if progress_state == 'Pending' or progress_state == 'Importing':
-
-        print(f"Job: {progress_state}.")
-        print(f"Finised: {progress_percent}%.")
-
-    elif progress_state == 'Completed':
-
-        print(f"Job: {progress_state}.")
-        print(f"Imported {progress_json['data']['totalRows']} rows.")
-
-        break
-
-    elif progress_state == 'Failed':
-
-        print(f"Job: {progress_state}.")
-        print(progress_json)
-
-        print("Exiting...")
-        exit()
 
 ################################################################################
 # Create index
@@ -137,7 +62,7 @@ index_params.add_index(
         metric_type="HAMMING",
         index_type="BIN_IVF_FLAT",
         index_name="vector_index",
-        params={ "nlist": 128 }
+        params={ "nlist": 128}
     )
 
 print("Creating Index file.")
@@ -187,5 +112,84 @@ res = client.get_load_state(
 
 print("Collection load state:")
 print(res)
+
+################################################################################ 
+# Create import job
+# https://milvus.io/docs/import-data.md
+
+# Define the API endpoint
+job_url = "http://localhost:19530/v2/vectordb/jobs/import/create"
+
+# Define the headers
+headers = {
+    "Content-Type": "application/json"
+}
+
+# Define the data payload
+job_url_data = {
+    "files": files,
+    "collectionName": "crossref"
+}
+
+# Make the POST request
+job_response = requests.post(job_url, headers=headers, json=job_url_data)
+job_json = job_response.json()
+
+# Print the response
+print("Job details:")
+print(job_response.status_code)
+print(job_json)
+
+# Extract jobId
+job_id = job_json['data']['jobId']
+
+# Periodically check on import status
+progress_url = "http://localhost:19530/v2/vectordb/jobs/import/get_progress"
+
+progress_url_data = {
+    "jobId": f"{job_id}"
+}
+
+while True:
+
+    print('*'*80)
+
+    # Sleep a bit
+    seconds = 10
+    print(f"Sleeping for {seconds} seconds")
+    sleep(seconds)
+
+    
+    # Make the POST request
+    progress_response = requests.post(progress_url, headers=headers, json=progress_url_data)
+
+    progress_json = progress_response.json()
+    # print(progress_json)
+
+    progress_percent = progress_json['data']['progress']
+    progress_state = progress_json['data']['state']
+
+    if progress_state == 'Pending' or progress_state == 'Importing':
+
+        print(f"Job: {progress_state}.")
+        print(f"Finised: {progress_percent}%.")
+
+    elif progress_state == 'Completed':
+
+        print(f"Job: {progress_state}.")
+        print(f"Imported {progress_json['data']['totalRows']} rows.")
+
+        break
+
+    elif progress_state == 'Failed':
+
+        print(f"Job: {progress_state}.")
+        print(progress_json)
+
+        print("Exiting...")
+        exit()
+
+################################################################################
+
 
 
